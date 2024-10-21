@@ -41,6 +41,9 @@ type UnmarshalOptions struct {
 	// If DiscardUnknown is set, unknown fields and enum name values are ignored.
 	DiscardUnknown bool
 
+	// DoNotConvertFieldMask
+	DoNotConvertFieldMask bool
+
 	// Resolver is used for looking up types when unmarshaling
 	// google.protobuf.Any messages or extension fields.
 	// If nil, this defaults to using protoregistry.GlobalTypes.
