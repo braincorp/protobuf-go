@@ -836,10 +836,13 @@ func (e encoder) marshalFieldMask(m protoreflect.Message) error {
 		if !protoreflect.FullName(s).IsValid() {
 			return errors.New("%s contains invalid path: %q", genid.FieldMask_Paths_field_fullname, s)
 		}
-		// Return error if conversion to camelCase is not reversible.
-		cc := strs.JSONCamelCase(s)
-		if s != strs.JSONSnakeCase(cc) {
-			return errors.New("%s contains irreversible value %q", genid.FieldMask_Paths_field_fullname, s)
+		cc := s
+		if !e.opts.UseProtoNames {
+			// Return error if conversion to camelCase is not reversible.
+			cc = strs.JSONCamelCase(s)
+			if s != strs.JSONSnakeCase(cc) {
+				return errors.New("%s contains irreversible value %q", genid.FieldMask_Paths_field_fullname, s)
+			}
 		}
 		paths = append(paths, cc)
 	}
@@ -866,9 +869,12 @@ func (d decoder) unmarshalFieldMask(m protoreflect.Message) error {
 	list := m.Mutable(fd).List()
 
 	for _, s0 := range paths {
-		s := strs.JSONSnakeCase(s0)
-		if strings.Contains(s0, "_") || !protoreflect.FullName(s).IsValid() {
-			return d.newError(tok.Pos(), "%v contains invalid path: %q", genid.FieldMask_Paths_field_fullname, s0)
+		s := s0
+		if !d.opts.DoNotConvertFieldMask {
+			s = strs.JSONSnakeCase(s0)
+			if strings.Contains(s0, "_") || !protoreflect.FullName(s).IsValid() {
+				return d.newError(tok.Pos(), "%v contains invalid path: %q", genid.FieldMask_Paths_field_fullname, s0)
+			}
 		}
 		list.Append(protoreflect.ValueOfString(s))
 	}

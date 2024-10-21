@@ -1,0 +1,52 @@
+diff --git a/encoding/protojson/decode.go b/encoding/protojson/decode.go
+index f4790237..cff7d122 100644
+--- a/encoding/protojson/decode.go
++++ b/encoding/protojson/decode.go
+@@ -41,6 +41,9 @@ type UnmarshalOptions struct {
+ 	// If DiscardUnknown is set, unknown fields and enum name values are ignored.
+ 	DiscardUnknown bool
+ 
++	// DoNotConvertFieldMask
++	DoNotConvertFieldMask bool
++
+ 	// Resolver is used for looking up types when unmarshaling
+ 	// google.protobuf.Any messages or extension fields.
+ 	// If nil, this defaults to using protoregistry.GlobalTypes.
+diff --git a/encoding/protojson/well_known_types.go b/encoding/protojson/well_known_types.go
+index 25329b76..eefa75f8 100644
+--- a/encoding/protojson/well_known_types.go
++++ b/encoding/protojson/well_known_types.go
+@@ -832,10 +832,13 @@ func (e encoder) marshalFieldMask(m protoreflect.Message) error {
+ 		if !protoreflect.FullName(s).IsValid() {
+ 			return errors.New("%s contains invalid path: %q", genid.FieldMask_Paths_field_fullname, s)
+ 		}
+-		// Return error if conversion to camelCase is not reversible.
+-		cc := strs.JSONCamelCase(s)
+-		if s != strs.JSONSnakeCase(cc) {
+-			return errors.New("%s contains irreversible value %q", genid.FieldMask_Paths_field_fullname, s)
++		cc := s
++		if !e.opts.UseProtoNames {
++			// Return error if conversion to camelCase is not reversible.
++			cc = strs.JSONCamelCase(s)
++			if s != strs.JSONSnakeCase(cc) {
++				return errors.New("%s contains irreversible value %q", genid.FieldMask_Paths_field_fullname, s)
++			}
+ 		}
+ 		paths = append(paths, cc)
+ 	}
+@@ -862,9 +865,12 @@ func (d decoder) unmarshalFieldMask(m protoreflect.Message) error {
+ 	list := m.Mutable(fd).List()
+ 
+ 	for _, s0 := range paths {
+-		s := strs.JSONSnakeCase(s0)
+-		if strings.Contains(s0, "_") || !protoreflect.FullName(s).IsValid() {
+-			return d.newError(tok.Pos(), "%v contains invalid path: %q", genid.FieldMask_Paths_field_fullname, s0)
++		s := s0
++		if !d.opts.DoNotConvertFieldMask {
++			s = strs.JSONSnakeCase(s0)
++			if strings.Contains(s0, "_") || !protoreflect.FullName(s).IsValid() {
++				return d.newError(tok.Pos(), "%v contains invalid path: %q", genid.FieldMask_Paths_field_fullname, s0)
++			}
+ 		}
+ 		list.Append(protoreflect.ValueOfString(s))
+ 	}
